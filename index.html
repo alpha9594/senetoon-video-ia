@@ -216,8 +216,14 @@ $("go").onclick = async () => {
 
     const t0 = Date.now();
     while (true) {
-      await sleep(3000);
+      await sleep(10000);
       const q = await fetch(BASE + "/agnesapi?video_id=" + encodeURIComponent(id) + "&model_name=" + MODEL, { headers: headers() });
+      if (q.status === 429 || q.status >= 500) {
+        const w = Math.round((Date.now() - t0) / 1000);
+        if (w > 1200) throw new Error("Agnes ne répond plus (plus de 20 min). Réessaie plus tard.");
+        show("Agnes est très chargé, je revérifie dans 10 s… (" + w + " s, la vidéo continue de se fabriquer)", "", 10);
+        continue;
+      }
       if (!q.ok) throw new Error(await readError(q));
       const st = await q.json();
       const sec = Math.round((Date.now() - t0) / 1000);
@@ -239,7 +245,7 @@ $("go").onclick = async () => {
         throw new Error("La génération a échoué" + (e ? " : " + e : "."));
       }
       show("Génération en cours… " + sec + " s (statut : " + (st.status || "?") + ")", "", p);
-      if (sec > 900) throw new Error("Trop long (plus de 15 min). Réessaie plus tard.");
+      if (sec > 1200) throw new Error("Trop long (plus de 20 min). Réessaie plus tard.");
     }
   } catch (e) {
     const m = String(e.message || e);
