@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SENETOON Vidéo IA</title>
+<style>
+  :root{--bg:#0f0f14;--card:#1a1a22;--line:#2c2c38;--txt:#f2f2f5;--mut:#9a9aaa;--acc:#ffb703;--ok:#3ddc84;--err:#ff5a5f}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);line-height:1.45}
+  .wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  h1 span{color:var(--acc)}
+  .sub{color:var(--mut);margin:0 0 20px;font-size:.95rem}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  label{display:block;font-weight:600;margin:12px 0 6px;font-size:.92rem}
+  label:first-child{margin-top:0}
+  input,textarea,select{width:100%;background:#111118;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:1rem;font-family:inherit}
+  textarea{min-height:110px;resize:vertical}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  button{border:0;border-radius:10px;padding:13px 16px;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit}
+  .main{background:var(--acc);color:#111;width:100%;margin-top:16px}
+  .main:disabled{opacity:.5;cursor:wait}
+  .ghost{background:#26263a;color:var(--txt);padding:9px 12px;font-size:.88rem;font-weight:600}
+  .tabs{display:flex;gap:8px;margin-bottom:4px}
+  .tabs button{flex:1;background:#111118;color:var(--mut);border:1px solid var(--line);padding:10px}
+  .tabs button.on{background:var(--acc);color:#111;border-color:var(--acc)}
+  .hint{color:var(--mut);font-size:.82rem;margin-top:5px}
+  .status{margin-top:14px;padding:12px;border-radius:10px;background:#111118;border:1px solid var(--line);display:none;font-size:.95rem}
+  .status.err{border-color:var(--err);color:#ffb3b5}
+  .status.ok{border-color:var(--ok)}
+  .bar{height:8px;background:#26263a;border-radius:6px;overflow:hidden;margin-top:8px}
+  .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .4s}
+  video{width:100%;max-height:70vh;border-radius:12px;background:#000;margin-top:12px}
+  .hist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .hist .it{background:#111118;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:.8rem}
+  .hist video{margin-top:0;max-height:220px}
+  .hist p{margin:6px 0;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .hist a{color:var(--acc)}
+  .keyrow{display:flex;gap:8px}
+  .keyrow input{flex:1}
+  .hidden{display:none}
+  a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span>SENETOON</span> Vidéo IA</h1>
+  <p class="sub">Génère des vidéos IA avec l'API gratuite d'Agnes AI (modèle Agnes Video 2.5 Flash).</p>
+
+  <div class="card">
+    <label for="key">Ta clé API Agnes</label>
+    <div class="keyrow">
+      <input id="key" type="password" placeholder="Colle ta clé ici" autocomplete="off">
+      <button class="ghost" id="showKey" type="button">Voir</button>
+    </div>
+    <div class="hint">Clé gratuite sur <a href="https://platform.agnes-ai.com/settings/apiKeys" target="_blank" rel="noopener">platform.agnes-ai.com</a> → API Keys. Elle reste dans ton navigateur, elle n'est jamais mise dans le code.</div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button type="button" class="on" data-mode="text">Texte → Vidéo</button>
+      <button type="button" data-mode="keyframe">Image → Vidéo</button>
+    </div>
+
+    <div id="imgBox" class="hidden">
+      <label for="first">Lien de l'image de départ</label>
+      <input id="first" type="url" placeholder="https://.../image.png">
+      <label for="last">Lien de l'image de fin (optionnel)</label>
+      <input id="last" type="url" placeholder="https://.../image2.png">
+      <div class="hint">L'image doit être en ligne (lien public direct vers un .png ou .jpg).</div>
+    </div>
+
+    <label for="prompt">Décris ta vidéo</label>
+    <textarea id="prompt" placeholder="Ex : Un jeune homme sénégalais dans une rue animée de Dakar au coucher du soleil, cars rapides colorés, caméra qui avance lentement, style cinéma"></textarea>
+    <button class="ghost" id="boost" type="button" style="margin-top:8px">✨ Améliorer mon texte avec l'IA</button>
+
+    <div class="row3">
+      <div>
+        <label for="ratio">Format</label>
+        <select id="ratio">
+          <option value="9:16">9:16 TikTok</option>
+          <option value="16:9">16:9 YouTube</option>
+          <option value="1:1">1:1 Carré</option>
+          <option value="4:3">4:3</option>
+          <option value="3:4">3:4</option>
+          <option value="21:9">21:9 Cinéma</option>
+        </select>
+      </div>
+      <div>
+        <label for="secs">Durée</label>
+        <select id="secs"></select>
+      </div>
+      <div>
+        <label for="seed">Seed (optionnel)</label>
+        <input id="seed" type="number" placeholder="aléatoire">
+      </div>
+    </div>
+
+    <button class="main" id="go" type="button">🎬 Générer la vidéo</button>
+
+    <div class="status" id="status">
+      <div id="msg"></div>
+      <div class="bar"><i id="prog"></i></div>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong>Mes vidéos</strong>
+      <button class="ghost" id="clear" type="button">Vider</button>
+    </div>
+    <div class="hist" id="hist"><span class="hint">Aucune vidéo pour l'instant.</span></div>
+    <div class="hint" style="margin-top:8px">Les liens Agnes peuvent expirer : télécharge tes vidéos rapidement.</div>
+  </div>
+</div>
+
+<script>
+const BASE = "https://apihub.agnes-ai.com";
+const MODEL = "agnes-video-2.5-flash";
+const $ = id => document.getElementById(id);
+let mode = "text";
+
+// petit stockage local (peut être indisponible)
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+
+// durées 4 à 12 s
+for (let s = 4; s <= 12; s++) {
+  const o = document.createElement("option");
+  o.value = String(s); o.textContent = s + " s";
+  if (s === 5) o.selected = true;
+  $("secs").appendChild(o);
+}
+
+$("key").value = store.get("agnesKey", "");
+$("key").addEventListener("input", e => store.set("agnesKey", e.target.value.trim()));
+$("showKey").onclick = () => {
+  const k = $("key"); k.type = k.type === "password" ? "text" : "password";
+  $("showKey").textContent = k.type === "password" ? "Voir" : "Cacher";
+};
+$("ratio").value = store.get("ratio", "9:16");
+$("ratio").onchange = e => store.set("ratio", e.target.value);
+
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); mode = b.dataset.mode;
+  $("imgBox").classList.toggle("hidden", mode !== "keyframe");
+});
+
+function show(text, kind, pct){
+  const s = $("status"); s.style.display = "block";
+  s.className = "status" + (kind ? " " + kind : "");
+  $("msg").textContent = text;
+  if (pct !== undefined) $("prog").style.width = pct + "%";
+}
+
+function headers(){
+  return { "Authorization": "Bearer " + $("key").value.trim(), "Content-Type": "application/json" };
+}
+
+async function readError(r){
+  let t = ""; try { t = await r.text(); } catch(e){}
+  try { const j = JSON.parse(t); t = (j.error && (j.error.message || j.error)) || j.message || t; } catch(e){}
+  if (r.status === 401) return "Clé API refusée. Vérifie ta clé.";
+  if (r.status === 429) return "Trop de demandes. Attends une minute puis réessaie.";
+  return "Erreur " + r.status + " : " + String(t).slice(0, 300);
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+$("go").onclick = async () => {
+  const key = $("key").value.trim();
+  const prompt = $("prompt").value.trim();
+  if (!key) return show("Colle d'abord ta clé API Agnes.", "err");
+  if (!prompt) return show("Écris une description de la vidéo.", "err");
+
+  const body = {
+    model: MODEL, prompt, mode,
+    seconds: $("secs").value, size: "720P", aspect_ratio: $("ratio").value
+  };
+  const seed = $("seed").value.trim();
+  if (seed) body.seed = parseInt(seed, 10);
+  if (mode === "keyframe") {
+    const f = $("first").value.trim(), l = $("last").value.trim();
+    if (!f && !l) return show("Mets au moins le lien d'une image.", "err");
+    if (f) body.first_frame = f;
+    if (l) body.last_frame = l;
+  }
+
+  $("go").disabled = true; $("result").innerHTML = "";
+  show("Envoi de la demande…", "", 3);
+  try {
+    const r = await fetch(BASE + "/v1/videos", { method: "POST", headers: headers(), body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(await readError(r));
+    const task = await r.json();
+    const id = task.video_id || task.id || task.task_id;
+    if (!id) throw new Error("Réponse inattendue : " + JSON.stringify(task).slice(0, 300));
+
+    const t0 = Date.now();
+    while (true) {
+      await sleep(3000);
+      const q = await fetch(BASE + "/agnesapi?video_id=" + encodeURIComponent(id) + "&model_name=" + MODEL, { headers: headers() });
+      if (!q.ok) throw new Error(await readError(q));
+      const st = await q.json();
+      const sec = Math.round((Date.now() - t0) / 1000);
+      const p = Math.max(5, Math.min(99, st.progress || 0));
+      if (st.status === "completed") {
+        const url = st.url || st.video_url || (st.metadata && st.metadata.url);
+        if (!url) throw new Error("Vidéo terminée mais sans lien : " + JSON.stringify(st).slice(0, 300));
+        show("Vidéo prête en " + sec + " s ✅", "ok", 100);
+        $("result").innerHTML =
+          '<video controls autoplay playsinline src="' + url + '"></video>' +
+          '<p><a href="' + url + '" target="_blank" rel="noopener" download>⬇️ Télécharger / ouvrir la vidéo</a></p>';
+        const h = store.get("hist", []);
+        h.unshift({ url, prompt, ratio: body.aspect_ratio, date: new Date().toLocaleString("fr-FR") });
+        store.set("hist", h.slice(0, 30)); drawHist();
+        break;
+      }
+      if (st.status === "failed") {
+        const e = st.error && (st.error.message || JSON.stringify(st.error));
+        throw new Error("La génération a échoué" + (e ? " : " + e : "."));
+      }
+      show("Génération en cours… " + sec + " s (statut : " + (st.status || "?") + ")", "", p);
+      if (sec > 900) throw new Error("Trop long (plus de 15 min). Réessaie plus tard.");
+    }
+  } catch (e) {
+    const m = String(e.message || e);
+    show(m.includes("Failed to fetch")
+      ? "Connexion impossible à Agnes (réseau, ou navigateur qui bloque). Ouvre la page depuis GitHub Pages ou réessaie."
+      : m, "err");
+  } finally {
+    $("go").disabled = false;
+  }
+};
+
+// Améliorer le texte avec le modèle texte gratuit d'Agnes
+$("boost").onclick = async () => {
+  const key = $("key").value.trim(), p = $("prompt").value.trim();
+  if (!key) return show("Colle d'abord ta clé API Agnes.", "err");
+  if (!p) return show("Écris d'abord une idée, même courte.", "err");
+  $("boost").disabled = true; show("Amélioration du texte…", "", 30);
+  try {
+    const r = await fetch(BASE + "/v1/chat/completions", {
+      method: "POST", headers: headers(),
+      body: JSON.stringify({
+        model: "agnes-2.0-flash",
+        messages: [
+          { role: "system", content: "Tu écris des prompts pour un générateur de vidéo IA. Réécris l'idée de l'utilisateur en un seul paragraphe en anglais (le modèle comprend mieux l'anglais) : sujet, action, décor, mouvement de caméra, lumière, style. 60 mots maximum. Réponds uniquement avec le prompt." },
+          { role: "user", content: p }
+        ]
+      })
+    });
+    if (!r.ok) throw new Error(await readError(r));
+    const j = await r.json();
+    const out = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+    if (!out) throw new Error("Pas de réponse du modèle texte.");
+    $("prompt").value = out.trim();
+    show("Texte amélioré ✅ Tu peux le modifier puis générer.", "ok", 100);
+  } catch (e) { show(String(e.message || e), "err"); }
+  finally { $("boost").disabled = false; }
+};
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+function drawHist(){
+  const h = store.get("hist", []);
+  $("hist").innerHTML = h.length ? h.map(v =>
+    '<div class="it"><video src="' + esc(v.url) + '" controls preload="metadata" playsinline></video>' +
+    '<p>' + esc(v.prompt) + '</p><span>' + esc(v.ratio) + ' · ' + esc(v.date) + '</span><br>' +
+    '<a href="' + esc(v.url) + '" target="_blank" rel="noopener">Télécharger</a></div>'
+  ).join("") : '<span class="hint">Aucune vidéo pour l\'instant.</span>';
+}
+$("clear").onclick = () => { if (confirm("Vider la liste ?")) { store.set("hist", []); drawHist(); } };
+drawHist();
+</script>
+</body>
+</html>
