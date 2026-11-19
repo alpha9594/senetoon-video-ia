@@ -196,8 +196,20 @@ $("go").onclick = async () => {
   $("go").disabled = true; $("result").innerHTML = "";
   show("Envoi de la demande…", "", 3);
   try {
-    const r = await fetch(BASE + "/v1/videos", { method: "POST", headers: headers(), body: JSON.stringify(body) });
-    if (!r.ok) throw new Error(await readError(r));
+    let r, essai = 0;
+    while (true) {
+      r = await fetch(BASE + "/v1/videos", { method: "POST", headers: headers(), body: JSON.stringify(body) });
+      if (r.ok) break;
+      if ((r.status === 503 || r.status === 429) && essai < 40) {
+        essai++;
+        for (let s = 30; s > 0; s--) {
+          show("File d'attente Agnes pleine. Nouvel essai dans " + s + " s (essai " + essai + "/40). Laisse la page ouverte.", "", 3);
+          await sleep(1000);
+        }
+        continue;
+      }
+      throw new Error(await readError(r));
+    }
     const task = await r.json();
     const id = task.video_id || task.id || task.task_id;
     if (!id) throw new Error("Réponse inattendue : " + JSON.stringify(task).slice(0, 300));
